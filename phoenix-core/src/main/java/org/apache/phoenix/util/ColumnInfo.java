@@ -10,13 +10,8 @@
 
 package org.apache.phoenix.util;
 
-import java.util.List;
-
-import org.apache.phoenix.schema.PDataType;
-
 import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
+import org.apache.phoenix.schema.PDataType;
 
 /**
  * ColumnInfo used to store Column Name and its associated PDataType
@@ -83,15 +78,20 @@ public class ColumnInfo {
      * parsed
      */
     public static ColumnInfo fromString(String stringRepresentation) {
-        List<String> components =
-                Lists.newArrayList(Splitter.on(STR_SEPARATOR).split(stringRepresentation));
-        if (components.size() != 2) {
-            throw new IllegalArgumentException("Unparseable string: " + stringRepresentation);
-        }
 
+//        List<String> components =
+//                Lists.newArrayList(Splitter.on(STR_SEPARATOR).split(stringRepresentation));
+//        if (components.size() != 2) {
+//            throw new IllegalArgumentException("Unparseable string: " + stringRepresentation);
+//        }
+
+        int index = stringRepresentation.lastIndexOf(STR_SEPARATOR);
+        String columnName = stringRepresentation.substring(0, index);
+        String sqlType = stringRepresentation.substring(index+1);
+        System.out.println(columnName + "-" + sqlType);
         return new ColumnInfo(
-                components.get(0),
-                PDataType.fromSqlTypeName(components.get(1)).getSqlType());
+                columnName,
+                PDataType.fromSqlTypeName(sqlType).getSqlType());
     }
 
 }

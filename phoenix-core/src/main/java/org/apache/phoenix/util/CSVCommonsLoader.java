@@ -17,18 +17,9 @@
  */
 package org.apache.phoenix.util;
 
-import java.io.File;
-import java.io.Reader;
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -40,9 +31,13 @@ import org.apache.phoenix.util.csv.CsvUpsertExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import java.io.File;
+import java.io.Reader;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
 
 /***
  * Upserts CSV data using Phoenix JDBC connection
@@ -320,7 +315,11 @@ public class CSVCommonsLoader {
             // Leave "null" as indication to skip b/c it doesn't exist
             for (int i = 0; i < columns.size(); i++) {
                 String columnName = columns.get(i).trim();
-                Integer sqlType = columnNameToTypeMap.get(columnName);
+                String tmpColumnName =columnName;
+                if (columnName.length() > 0 && columnName.charAt(0)=='"'){
+                    tmpColumnName = columnName.substring(1, columnName.length()-1);
+                }
+                Integer sqlType = columnNameToTypeMap.get(tmpColumnName);
                 if (sqlType == null) {
                     if (strict) {
                         throw new SQLExceptionInfo.Builder(
