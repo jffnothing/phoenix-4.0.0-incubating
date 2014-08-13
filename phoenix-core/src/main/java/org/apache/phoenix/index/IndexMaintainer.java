@@ -17,23 +17,15 @@
  */
 package org.apache.phoenix.index;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -46,29 +38,13 @@ import org.apache.phoenix.hbase.index.covered.update.ColumnReference;
 import org.apache.phoenix.hbase.index.util.ImmutableBytesPtr;
 import org.apache.phoenix.hbase.index.util.KeyValueBuilder;
 import org.apache.phoenix.query.QueryConstants;
-import org.apache.phoenix.schema.PColumn;
-import org.apache.phoenix.schema.PColumnFamily;
-import org.apache.phoenix.schema.PDataType;
-import org.apache.phoenix.schema.PIndexState;
-import org.apache.phoenix.schema.PTable;
-import org.apache.phoenix.schema.PTableType;
-import org.apache.phoenix.schema.RowKeySchema;
-import org.apache.phoenix.schema.SaltingUtil;
-import org.apache.phoenix.schema.SortOrder;
-import org.apache.phoenix.schema.ValueSchema;
+import org.apache.phoenix.schema.*;
 import org.apache.phoenix.schema.ValueSchema.Field;
 import org.apache.phoenix.util.BitSet;
-import org.apache.phoenix.util.ByteUtil;
-import org.apache.phoenix.util.IndexUtil;
-import org.apache.phoenix.util.MetaDataUtil;
-import org.apache.phoenix.util.SchemaUtil;
-import org.apache.phoenix.util.TrustedByteArrayOutputStream;
+import org.apache.phoenix.util.*;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import java.io.*;
+import java.util.*;
 
 /**
  * 
@@ -452,9 +428,24 @@ public class IndexMaintainer implements Writable, Iterable<ColumnReference> {
             if (newValue != null) { // Indexed column was potentially changed
                 ImmutableBytesPtr oldValue = oldState.getLatestValue(ref);
                 // If there was no old value or the old value is different than the new value, the index row needs to be deleted
-                if (oldValue == null || 
-                        Bytes.compareTo(oldValue.get(), oldValue.getOffset(), oldValue.getLength(), 
-                          newValue.getValueArray(), newValue.getValueOffset(), newValue.getValueLength()) != 0){
+//                if (oldValue == null ||
+//                        Bytes.compareTo(oldValue.get(), oldValue.getOffset(), oldValue.getLength(),
+//                          newValue.getValueArray(), newValue.getValueOffset(), newValue.getValueLength()) != 0){
+//                    return true;
+//                }
+                boolean newValueSetAsNull = newValue.getType() == Type.DeleteColumn.getCode();
+                //If the new column value has to be set as null and the older value is null too,
+                //then just skip to the next indexed column.
+                if (newValueSetAsNull && oldValue == null) {
+                    continue;
+                }
+                if ((oldValue == null && !newValueSetAsNull) || (oldValue != null && newValueSetAsNull)) {
+                    return true;
+                }
+                // If there was no old value or the old value is different than the new value, the index row needs to be deleted
+                if (oldValue == null ||
+                        Bytes.compareTo(oldValue.get(), oldValue.getOffset(), oldValue.getLength(),
+                                newValue.getBuffer(), newValue.getValueOffset(), newValue.getValueLength()) != 0) {
                     return true;
                 }
             }
